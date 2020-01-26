@@ -84,8 +84,11 @@ glm_dat
 # scatter_dat <- left_join(plotDat,glm_dat,by="names")
 # ggplot(scatter_dat) + geom_point(aes(x=abs(estimate),y=importance))
 
-rF.fit <- ranger(factor(exposure)~.,data=data.frame(covs),probability = T)
-ps <- predict(rF.fit,data=data.frame(expsoure=exposure,covs))$pred[,2]
+ex_sl <- as.numeric(exposure)
+
+SL.fit <- SuperLearner(Y=exposure,X=covs,family = "binomial",
+                       SL.library = c("SL.ranger","SL.glm","SL.gam"))
+ps <- predict(SL.fit,onlySL=T)$pred
 
 overlap_dat <- data.frame(exposure=exposure,ps=ps)
 
