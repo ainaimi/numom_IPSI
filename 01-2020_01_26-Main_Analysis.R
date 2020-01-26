@@ -23,7 +23,7 @@ for (package in c("tidyverse","ggplot2","npcausal")) {
 thm <- theme_classic() +
   theme(
     legend.position = "top",
-    legend.title=element_blank(),
+    #legend.title=element_blank(),
     legend.background = element_rect(fill = "transparent", colour = NA),
     legend.key = element_rect(fill = "transparent", colour = NA)
   )
@@ -92,9 +92,28 @@ ps <- predict(SL.fit,onlySL=T)$pred
 
 overlap_dat <- data.frame(exposure=exposure,ps=ps)
 
-ggplot(overlap_dat) + geom_density(aes(x=ps,group=factor(exposure),fill=factor(exposure)))
+f1 <- ggplot(overlap_dat) + 
+  geom_density(aes(x=ps,
+                   group=factor(exposure),
+                   fill=factor(exposure)),
+               alpha=.75) +
+  scale_fill_grey() +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  xlab("Propensity Score") +
+  ylab("Estimated Density") +
+  theme(text = element_text(size=17.5)) +
+  guides(fill=guide_legend(title="Observed Exposure"))
 
-ggplot(overlap_dat) + geom_boxplot(aes(x=ps,group=factor(exposure),fill=factor(exposure)))
+pdf(here("figures","2019_1_26-PS_Overlap_NuMom_Figure1.pdf"),width = 5,height = 5)
+f1
+dev.off()
+
+ggplot(overlap_dat) + 
+  geom_boxplot(aes(x=ps,
+                   group=factor(exposure),
+                   fill=factor(exposure))) +
+  scale_fill_grey()
 
 ate(y=outcome, a=exposure, x=covs, nsplits=2, sl.lib=c("SL.ranger","SL.glm","SL.gam"))
 att(y=outcome, a=exposure, x=covs, nsplits=2, sl.lib=c("SL.ranger","SL.glm","SL.gam"))
