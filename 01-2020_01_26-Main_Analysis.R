@@ -1,6 +1,6 @@
 packages <- c("data.table","broom","gridExtra",
               "here","VIM","haven","skimr","beepr",
-              "GGally","ranger","tmle")
+              "GGally","ranger","tmle","xtable")
 
 for (package in packages) {
   if (!require(package, character.only=T, quietly=T)) {
@@ -38,7 +38,7 @@ main <- read_csv("data/numomData_small_12.04.2019.csv") %>%
          age=if_else(is.na(age),mean(age,na.rm=T),age),
          education=as.numeric(education),
          married=married-1,
-         prepregbmi=as.numeric(scale(prepregbmi)),
+         prepregbmi=as.numeric(prepregbmi),
          pct_emptyc=pct_emptyc)
 
 table(main$education)
@@ -84,13 +84,122 @@ glm_dat
 # scatter_dat <- left_join(plotDat,glm_dat,by="names")
 # ggplot(scatter_dat) + geom_point(aes(x=abs(estimate),y=importance))
 
+## Descriptives Tables
+
+table(covs$education)
+table(covs$married)
+table(covs$smokerpre)
+
+sum(exposure)
+sum(1-exposure)
+length(exposure)
+
+t1 <- covs %>% 
+  mutate(outcome=outcome,exposure=exposure) %>% 
+  group_by(exposure) %>% 
+  summarize_all(.,mean)
+
+t2 <- covs %>% 
+  mutate(outcome=outcome) %>% 
+  summarize_all(.,mean) %>% 
+  mutate(exposure=99)
+
+xtable(t(rbind(t1,t2)))
+
+## PS Overlap
 ex_sl <- as.numeric(exposure)
 
 SL.fit <- SuperLearner(Y=exposure,X=covs,family = "binomial",
                        SL.library = c("SL.ranger","SL.glm","SL.gam"))
 ps <- predict(SL.fit,onlySL=T)$pred
+colnames(ps) <- "pi_hat"
 
+ps %>% as_tibble(ps) %>% filter(round(pi_hat,2)==.50) %>% count()
+
+ps <- as_tibble(round(ps,2)) %>% 
+  distinct() 
+
+ps <- cbind(rep(seq(0.2,5,length.out=15),each=nrow(ps)),
+            unlist(t(rep(ps,15))))
+
+ps <- data.frame(ps)
+names(ps) <- c("delta","pi_hat")
+
+ps <- as_tibble(ps) %>% 
+  mutate(pi_delta=(delta*pi_hat)/(delta*pi_hat + 1 - pi_hat))
+#  rownames_to_column(var = "ID")
+# \pi_{\delta} = (\delta\pi) / (\delta\pi + 1-\pi)
+
+ps %>% filter(pi_hat==.50) 
+
+shift_plot1 <- ggplot() + 
+  geom_line(data=ps,aes(x=delta,y=pi_delta,group=pi_hat),
+            color="darkgray",size=.2) +
+  #geom_line(data=subset(ps,pi_hat==.50),
+  #          aes(x=delta,y=pi_delta,group=pi_hat),
+  #          color="red",size=.5) +
+  geom_vline(xintercept=1,color="black",size=.5) +
+  #geom_point(data=ps,aes(x=delta,y=pi_delta),size=.5,shape=1) +
+  scale_x_continuous(expand=c(0,0),trans="log2") +
+  scale_y_continuous(expand=c(0,0)) +
+  theme(text = element_text(size=17.5)) +
+  ylab(expression(paste("Shifted PS, ", pi[delta]))) +
+  xlab(expression(paste("Odds Ratio Change, ", delta)))
+
+pdf(here("figures","2019_1_26-Shift_Plot1_NuMom_Figure2.pdf"),width = 5,height = 5)
+shift_plot1
+dev.off()
+
+ps <- predict(SL.fit,onlySL=T)$pred
+colnames(ps) <- "pi_hat"
+ps <- cbind(rep(c(0.2,5),each=nrow(ps)),
+            unlist(t(rep(ps,2))))
+
+ps <- data.frame(ps)
+names(ps) <- c("delta","pi_hat")
+
+ps <- as_tibble(ps) %>% 
+  mutate(pi_delta=(delta*pi_hat)/(delta*pi_hat + 1 - pi_hat))
+
+p1 <- ps %>%  
+  select(delta,pi_delta)
+
+p2 <- ps %>% 
+  filter(delta == .2) %>% 
+  select(delta,pi_hat) %>%
+  mutate(delta=1) %>% 
+  rename(pi_delta=pi_hat)
+
+p <- rbind(p1,p2)
+shift_plot2 <- ggplot(p) + 
+  geom_density(aes(pi_delta,
+                   group=delta,
+                   fill=factor(delta)),
+                  alpha=.5,bw=.0125) +
+  scale_fill_grey() +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  theme(text = element_text(size=17.5)) +
+  guides(fill=guide_legend(title=paste(expression("Shift OR")))) +
+  ylab("Shifted PS Density") +
+  xlab(expression(paste("Shifted PS, ",pi[delta])))
+
+pdf(here("figures","2019_1_26-Shift_Plot2_NuMom_Figure2.pdf"),width = 5,height = 5)
+shift_plot2
+dev.off()
+
+pdf(here("figures","2019_1_26-Shift_Plot_combined_NuMom_Figure2.pdf"),
+    width = 10,
+    height = 5)
+  grid.arrange(shift_plot1,shift_plot2,ncol=2)
+dev.off()
+  
+# PS overlap plot
+ps <- predict(SL.fit,onlySL=T)$pred
 overlap_dat <- data.frame(exposure=exposure,ps=ps)
+
+summary(overlap_dat$ps)
+overlap_dat %>% filter(ps<.05)
 
 f1 <- ggplot(overlap_dat) + 
   geom_density(aes(x=ps,
@@ -116,7 +225,6 @@ ggplot(overlap_dat) +
   scale_fill_grey()
 
 ate(y=outcome, a=exposure, x=covs, nsplits=2, sl.lib=c("SL.ranger","SL.glm","SL.gam"))
-att(y=outcome, a=exposure, x=covs, nsplits=2, sl.lib=c("SL.ranger","SL.glm","SL.gam"))
 
 tml.fit <- tmle(Y=outcome,
                 A=exposure,
@@ -133,19 +241,32 @@ res <- ipsi(y = outcome,
             nsplits = 5, 
             delta.seq = seq(0.2,5,length.out=15), 
             id=id, 
-            time=time)
+            time=time,
+            sl.lib=c("SL.ranger","SL.glm","SL.gam"))
+
+res
 
 plotDat <- res$res
 
-plot_obj <- ggplot(plotDat) + scale_x_continuous(trans='log2') +
+plot_obj <- ggplot(plotDat) + 
   geom_ribbon(aes(x=increment,ymin=ci.ll,ymax=ci.ul),
-              fill="lightblue",color="lightblue",alpha=.5) + 
+              fill="lightgrey",color="lightgrey",alpha=.5) + 
   geom_line(aes(x=increment,y=est)) + 
   geom_vline(xintercept=1,linetype="dashed") +
+  scale_x_continuous(expand = c(0,0),trans='log2',limits = c(.2,5)) +
+  scale_y_continuous(expand = c(0,0),limits=c(.05,.1)) +
+  theme(text = element_text(size=17.5)) +
   ylab("Risk of Preeclampsia") +
-  xlab("Change in Exposure Propensity (Odds Ratio)")
+  expression(paste("Odds Ratio Change, ", delta))
 
 plot_obj
 
+pdf(here("figures","2019_1_26-IPS_Estimate_NuMom_Figure2.pdf"),width = 5,height = 5)
+plot_obj
+dev.off()
+
 saveRDS(plot_obj,file="data/sga_g_whldens.rds")
 beep(sound=8)
+
+
+
