@@ -133,7 +133,7 @@ dev.off()
 ps <- predict(SL.fit,onlySL=T)$pred
 colnames(ps) <- "pi_hat"
 ps <- cbind(rep(c(0.2,5),each=nrow(ps)),
-            unlist(t(rep(ps,2))))
+            rep(ps,2))
 ps <- data.frame(ps)
 names(ps) <- c("delta","pi_hat")
 ps <- as_tibble(ps) %>% 
@@ -230,6 +230,7 @@ res <- ipsi(y = outcome,
 #' generate risk differences for Table 3
 
 #' generate figure depicting preeclampsia risk over range of delta
+plotDat <- res$res
 plot_obj <- ggplot(plotDat) + 
   geom_ribbon(aes(x=increment,ymin=ci.ll,ymax=ci.ul),
               fill="lightgrey",color="lightgrey",alpha=.5) + 
@@ -239,7 +240,7 @@ plot_obj <- ggplot(plotDat) +
   scale_y_continuous(expand = c(0,0),limits=c(.05,.1)) +
   theme(text = element_text(size=17.5)) +
   ylab("Risk of Preeclampsia") +
-  expression(paste("Odds Ratio Change, ", delta))
+  xlab(expression(paste("Odds Ratio Change, ", delta)))
 
 #' output figure to file
 pdf(here("figures","2019_1_26-IPS_Estimate-NuMom.pdf"),width = 5,height = 5)
