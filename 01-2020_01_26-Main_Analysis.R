@@ -123,7 +123,7 @@ shift_plot1 <- ggplot() +
   xlab(expression(paste("Odds Ratio Change, ", delta)))
 
 #' output plot to folder
-pdf(here("figures","2019_1_26-Shift_Plot1_NuMom_Figure2.pdf"),width = 5,height = 5)
+pdf(here("figures","2019_1_26-Shift_Plot1-NuMom.pdf"),width = 5,height = 5)
 shift_plot1
 dev.off()
 
@@ -165,12 +165,12 @@ shift_plot2 <- ggplot(p) +
   xlab(expression(paste("Shifted PS, ",pi[delta])))
 
 #' output plot to folder
-pdf(here("figures","2019_1_26-Shift_Plot2_NuMom_Figure2.pdf"),width = 5,height = 5)
+pdf(here("figures","2019_1_26-Shift_Plot2-NuMom.pdf"),width = 5,height = 5)
 shift_plot2
 dev.off()
 
 #' create combined two panel plot
-pdf(here("figures","2019_1_26-Shift_Plot_combined_NuMom_Figure2.pdf"),
+pdf(here("figures","2019_1_26-Shift_Plot_combined-NuMom.pdf"),
     width = 10,
     height = 5)
   grid.arrange(shift_plot1,shift_plot2,ncol=2)
@@ -199,7 +199,7 @@ f1 <- ggplot(overlap_dat) +
   guides(fill=guide_legend(title="Observed Exposure"))
 
 #' ouput plot to folder
-pdf(here("figures","2019_1_26-PS_Overlap_NuMom_Figure1.pdf"),width = 5,height = 5)
+pdf(here("figures","2019_1_26-PS_Overlap-NuMom.pdf"),width = 5,height = 5)
 f1
 dev.off()
 
@@ -242,7 +242,7 @@ plot_obj <- ggplot(plotDat) +
   expression(paste("Odds Ratio Change, ", delta))
 
 #' output figure to file
-pdf(here("figures","2019_1_26-IPS_Estimate_NuMom_Figure2.pdf"),width = 5,height = 5)
+pdf(here("figures","2019_1_26-IPS_Estimate-NuMom.pdf"),width = 5,height = 5)
 plot_obj
 dev.off()
 
