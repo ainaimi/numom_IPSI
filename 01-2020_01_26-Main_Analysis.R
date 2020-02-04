@@ -55,7 +55,7 @@ table(main$education)
 outcome <- main$outcome
 exposure <- main$exposure
 covs <- main %>% select(age,black,education,married,smokerpre,prepregbmi,insurpub,
-                        pct_emptyc,d_totdens,p_totdens,f_totdens,sodium_dens,fa_dens,g_nwhldens,g_whldens)
+                        pct_emptyc,d_totdens,p_totdens,f_totdens,sodium_dens,fa_dens,g_nwhldens,g_whldens,seaplant_dens)
 #' incremental PS estimator requires 
 #' an ID and time variable. For time-fixed 
 #' exposure, set time to 1 for all 
@@ -156,7 +156,7 @@ shift_plot2 <- ggplot(p) +
                    group=delta,
                    fill=factor(delta)),
                   alpha=.5,bw=.0125) +
-  scale_fill_grey() +
+  scale_fill_grey(start = 0, end = 1) +
   scale_x_continuous(expand=c(0,0)) +
   scale_y_continuous(expand=c(0,0)) +
   theme(text = element_text(size=17.5)) +
@@ -183,6 +183,12 @@ overlap_dat <- data.frame(exposure=exposure,ps=ps)
 #' how low does PS get and how many ppl are there?
 summary(overlap_dat$ps)
 overlap_dat %>% filter(ps<.05)
+
+#' compute mean and max stabilized weight
+overlap_dat <- overlap_dat %>% 
+  mutate(sw=exposure*mean(exposure)/ps + ((1-exposure)*(mean(1-exposure)))/(1-ps))
+
+summary(overlap_dat$sw)
 
 #' PS overlap plot
 f1 <- ggplot(overlap_dat) + 
